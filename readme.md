@@ -1,4 +1,5 @@
-## tool code
+## Tool Code
+This repo is aimed for some simple yet useful code produced by myself.
 
 ### Procuder
 Yu Rong (penincillin)
