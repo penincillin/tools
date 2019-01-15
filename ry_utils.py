@@ -4,26 +4,6 @@ import os, sys, shutil
 import os.path as osp
 
 
-def print_vars(_locals, variables, func):
-    '''
-    print variable in the variables,
-    the format is [name_of_variable, value_of_variable]
-    useage:
-    print_vars(locals(), variables)
-    '''
-    print('------------------------------------')
-    var_list = list()
-    for name, variable in list(_locals.items()):
-        if variable in variables:
-            idx = variables.index(variable)
-            var_list.append( (name, variable, idx) )
-
-    sorted_var_list = sorted(var_list, key=lambda a:a[2])
-    for name, variable, _ in sorted_var_list:
-        print("{}\t{}".format(name, func(variable)))
-    print('------------------------------------')
-
-
 def renew_dir(target_dir):
     if osp.exists(target_dir):
         shutil.rmtree(target_dir)
@@ -46,3 +26,14 @@ def generate_print_code(code_line):
     record = code_line.strip().split(',')
     for variable_name in record:
         print(" print('{0}', {0}) ".format(variable_name))
+
+
+def easy_parallel(target_func, all_args):
+    ''' Avoid to write this code each time '''
+    process_list = list()
+    for args in all_args:
+        p = mp.Process(target=target_func, args=args)
+        p.start()
+        process_list.append(p)
+    for p in process_list:
+        p.join()
