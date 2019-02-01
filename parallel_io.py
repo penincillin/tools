@@ -77,7 +77,7 @@ def get_pkl_file(pkl_dir):
     return pkl_file_list
 
 
-def load_pkl_single(pkl_file, py2to3):
+def load_pkl_single(pkl_file, py2to3=False):
     res_list = list()
     with open(pkl_file, 'rb') as in_f:
         if py2to3:

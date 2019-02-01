@@ -2,6 +2,28 @@
 
 import os, sys, shutil
 import os.path as osp
+import multiprocessing as mp
+import pickle
+
+
+def print_vars(_locals, variables, func):
+    '''
+    print variable in the variables,
+    the format is [name_of_variable, value_of_variable]
+    useage:
+    print_vars(locals(), variables)
+    '''
+    print('------------------------------------')
+    var_list = list()
+    for name, variable in list(_locals.items()):
+        if variable in variables:
+            idx = variables.index(variable)
+            var_list.append( (name, variable, idx) )
+
+    sorted_var_list = sorted(var_list, key=lambda a:a[2])
+    for name, variable, _ in sorted_var_list:
+        print("{}\t{}".format(name, func(variable)))
+    print('------------------------------------')
 
 
 def renew_dir(target_dir):
@@ -21,15 +43,17 @@ def remove_swp(in_dir):
                 os.remove(full_path)
 
 
-def generate_print_code(code_line):
+def gen_print_code(code_line):
     assert( type(code_line) == str )
     record = code_line.strip().split(',')
     for variable_name in record:
+        variable_name = variable_name.strip()
+        if len(variable_name) == 0: 
+            continue
         print(" print('{0}', {0}) ".format(variable_name))
 
 
 def easy_parallel(target_func, all_args):
-    ''' Avoid to write this code each time '''
     process_list = list()
     for args in all_args:
         p = mp.Process(target=target_func, args=args)
@@ -37,3 +61,12 @@ def easy_parallel(target_func, all_args):
         process_list.append(p)
     for p in process_list:
         p.join()
+
+
+def pkl2to3(in_pkl_file, out_pkl_file):
+    ''' This function is used to transfer pkl file saved with py2 to py3'''
+    assert(sys.version_info[0] >= 3)
+    with open(in_pkl_file, 'rb') as in_f:
+        data = pickle.load(in_f, encoding='latin1')
+    with open(out_pkl_file, 'wb') as out_f:
+        data = pickle.dump(data, out_f)
