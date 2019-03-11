@@ -17,12 +17,12 @@ def save_pkl_single(res_file, data_list):
 def save_pkl_parallel_list(res_dir, all_data):
     assert(type(all_data) == list)
     process_num = min(len(all_data), 32)
-    pivot = len(all_data)//process_num
+    pivot = len(all_data)//process_num+1
     process_list = list()
     for i in range(0, process_num+1):
         start = i*pivot
         end = min((i+1)*pivot, len(all_data))
-        if start>=end: continue
+        if start>=end: break
         res_file = osp.join(res_dir, '{}.pkl'.format(i))
         p = mp.Process(target=save_pkl_single, \
                 args=(res_file, all_data[start:end]))
@@ -36,12 +36,12 @@ def save_pkl_parallel_dict(res_dir, all_data):
     assert(type(all_data) == dict)
     dict_keys = list(all_data.keys())
     process_num = min(len(dict_keys), 32)
-    pivot = len(dict_keys)//process_num
+    pivot = len(dict_keys)//process_num + 1
     process_list = list()
     for i in range(0, process_num+1):
         start = i*pivot
         end = min((i+1)*pivot, len(all_data))
-        if start>=end: continue
+        if start>=end: break
         res_file = osp.join(res_dir, '{}.pkl'.format(i))
         sub_data = { key: all_data[key] \
                     for key in dict_keys[start:end] }
