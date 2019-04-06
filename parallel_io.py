@@ -13,58 +13,25 @@ def save_pkl_single(res_file, data_list):
     with open(res_file, 'wb') as out_f:
         pickle.dump(data_list, out_f)
 
-
-def save_pkl_parallel_list(res_dir, all_data):
-    assert(type(all_data) == list)
-    process_num = min(len(all_data), 32)
-    pivot = len(all_data)//process_num+1
-    process_list = list()
-    for i in range(0, process_num+1):
-        start = i*pivot
-        end = min((i+1)*pivot, len(all_data))
-        if start>=end: break
-        res_file = osp.join(res_dir, '{}.pkl'.format(i))
-        p = mp.Process(target=save_pkl_single, \
-                args=(res_file, all_data[start:end]))
-        p.start()
-        process_list.append(p)
-    for p in process_list:
-        p.join()
-
-
-def save_pkl_parallel_dict(res_dir, all_data):
-    assert(type(all_data) == dict)
-    dict_keys = list(all_data.keys())
-    process_num = min(len(dict_keys), 32)
-    pivot = len(dict_keys)//process_num + 1
-    process_list = list()
-    for i in range(0, process_num+1):
-        start = i*pivot
-        end = min((i+1)*pivot, len(all_data))
-        if start>=end: break
-        res_file = osp.join(res_dir, '{}.pkl'.format(i))
-        sub_data = { key: all_data[key] \
-                    for key in dict_keys[start:end] }
-        p = mp.Process(target=save_pkl_single, \
-                args=(res_file, sub_data))
-        p.start()
-        process_list.append(p)
-    for p in process_list:
-        p.join()
-
-
-def save_pkl_parallel(res_dir, all_data):
+def save_pkl_parallel(res_dir, data_list):
     if not osp.exists(res_dir):
         os.makedirs(res_dir)
-    if type(all_data) == list:
-        save_pkl_parallel_list(res_dir, all_data)
-    elif type(all_data) == dict:
-        save_pkl_parallel_dict(res_dir, all_data)
-    else:
-        print("Not supported class")
-
-
-
+    process_num = min(len(data_list), 32)
+    #process_num = 1
+    pivot = len(data_list)//process_num+1
+    process_list = list()
+    for i in range(0, process_num+1):
+        start = i*pivot
+        end = min((i+1)*pivot, len(data_list))
+        if start>=end or start>=len(data_list): 
+            break
+        res_file = osp.join(res_dir, '{}.pkl'.format(i))
+        p = mp.Process(target=save_pkl_single, \
+                args=(res_file, data_list[start:end]))
+        p.start()
+        process_list.append(p)
+    for p in process_list:
+        p.join()
 
 
 # load data from pkl
@@ -76,35 +43,40 @@ def get_pkl_file(pkl_dir):
                 pkl_file_list.append(osp.join(subdir, file))
     return pkl_file_list
 
-
-def load_pkl_single(pkl_file, py2to3=False):
-    res_list = list()
+def load_pkl_single(pkl_file, res_list=None):
+    if res_list is None:
+        res_list = list()
     with open(pkl_file, 'rb') as in_f:
-        if py2to3:
-            single_data = pickle.load(in_f, encoding='latin1')
-        else:
-            single_data = pickle.load(in_f)
-    return single_data
+        single_data_list = pickle.load(in_f, encoding='latin1')
+        for data in single_data_list:
+            res_list.append(data)
+    return res_list
 
-
-def load_pkl_parallel(pkl_dir, py2to3=False):
-
+def load_pkl_parallel_slow(pkl_dir):
     pkl_file_list = get_pkl_file(pkl_dir)
+    process_num = len(pkl_file_list)
+    process_list = list()
+    manager = mp.Manager()
+    result_list = manager.list()
+    for i in range(process_num):
+        pkl_file = pkl_file_list[i]
+        p = mp.Process(target=load_pkl_single, \
+                args=(pkl_file, result_list))
+        p.start()
+        process_list.append(p)
+    for p in process_list:
+        p.join()
 
+    data_list = [item for item in result_list]
+    return data_list
+
+def load_pkl_parallel(pkl_dir):
+    #print(pkl_dir)
+    pkl_file_list = get_pkl_file(pkl_dir)
     process_num = min(len(pkl_file_list), 32)
     pool = mp.Pool(process_num)
-    args = [(pkl_file, py2to3) for pkl_file in pkl_file_list]
-    result_list = pool.starmap(load_pkl_single, args)
-
-    all_data = None
-    if type(result_list[0])==list:
-        all_data = list()
-        for single_list in result_list:
-            all_data += single_list
-    elif type(result_list[0])==dict:
-        all_data = dict()
-        for single_dict in result_list:
-            all_data.update(single_dict)
-    else:
-        print('Invalid Data Type')
-    return all_data
+    result_list = pool.map(load_pkl_single, pkl_file_list)
+    data_list = []
+    for single_list in result_list:
+        data_list += single_list
+    return data_list
