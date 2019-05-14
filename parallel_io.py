@@ -53,6 +53,7 @@ def load_pkl_single(pkl_file, res_list=None):
         except UnicodeDecodeError:
             in_f.seek(0)
             data = pickle.load(in_f, encoding='latin1')
+    return data
 
 
 def load_pkl_parallel(pkl_dir):
