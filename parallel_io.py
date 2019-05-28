@@ -5,14 +5,16 @@ import pickle
 import time
 
 # save data to pkl
-def save_pkl_single(res_file, data_list):
+def save_pkl_single(res_file, data_list, protocol=-1):
     res_file_dir = '/'.join(res_file.split('/')[:-1])
     if len(res_file_dir)>0:
         if not osp.exists(res_file_dir):
             os.makedirs(res_file_dir)
     with open(res_file, 'wb') as out_f:
-        pickle.dump(data_list, out_f)
-
+        if protocol==2:
+            pickle.dump(data_list, out_f, protocol=2)
+        else:
+            pickle.dump(data_list, out_f)
 
 def save_pkl_parallel(res_dir, data_list):
     if not osp.exists(res_dir):
@@ -44,7 +46,6 @@ def get_pkl_file(pkl_dir):
             if file.find(".pkl")>=0:
                 pkl_file_list.append(osp.join(subdir, file))
     return pkl_file_list
-
 
 def load_pkl_single(pkl_file, res_list=None):
     with open(pkl_file, 'rb') as in_f:
