@@ -16,6 +16,10 @@ def build_dir(target_dir):
     if not osp.exists(target_dir):
         os.makedirs(target_dir)
 
+def make_subdir(in_path):
+    subdir_path = '/'.join(in_path.split('/')[:-1])
+    build_dir(subdir_path)
+
 
 def remove_swp(in_dir):
     remove_files = list()
