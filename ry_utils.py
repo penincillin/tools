@@ -17,6 +17,38 @@ def build_dir(target_dir):
         os.makedirs(target_dir)
 
 
+def make_subdir(in_path):
+    subdir_path = '/'.join(in_path.split('/')[:-1])
+    build_dir(subdir_path)
+
+
+def update_extension(file_path, new_extension):
+    assert new_extension[0] == '.'
+    old_extension = '.' + file_path.split('.')[-1]
+    new_file_path = file_path.replace(old_extension, new_extension)
+    return new_file_path
+
+
+def get_all_files(in_dir, extension, path_type='full'):
+    assert path_type in ['full', 'relative', 'name_only']
+    assert isinstance(extension, str) or isinstance(extension, tuple)
+
+    all_files = list()
+    for subdir, dirs, files in os.walk(in_dir):
+        for file in files:
+            if file.endswith(extension):
+                if path_type == 'full':
+                    file_path = osp.join(subdir, file)
+                elif path_type == 'relative':
+                    file_path = osp.join(subdir, file).replace(in_dir, '')
+                    if file_path.startswith('/'):
+                        file_path = file_path[1:]
+                else:
+                    file_path = file
+                all_files.append(file_path)
+    return sorted(all_files)
+
+
 def remove_swp(in_dir):
     remove_files = list()
     for subdir, dirs, files in os.walk(in_dir):
