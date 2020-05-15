@@ -4,6 +4,7 @@ import os.path as osp
 import multiprocessing as mp
 import numpy as np
 import cv2
+import pickle
 
 
 def renew_dir(target_dir):
@@ -17,8 +18,12 @@ def build_dir(target_dir):
         os.makedirs(target_dir)
 
 
-def make_subdir(in_path):
+def get_subdir(in_path):
     subdir_path = '/'.join(in_path.split('/')[:-1])
+    return subdir_path
+
+def make_subdir(in_path):
+    subdir_path = get_subdir(in_path)
     build_dir(subdir_path)
 
 
@@ -73,6 +78,29 @@ def md5sum(file_path):
     with open(file_path, 'rb') as in_f:
         hash_md5.update(in_f.read())
     return hash_md5.hexdigest()
+
+
+# save data to pkl
+def save_pkl(res_file, data_list, protocol=-1):
+    res_file_dir = '/'.join(res_file.split('/')[:-1])
+    if len(res_file_dir)>0:
+        if not osp.exists(res_file_dir):
+            os.makedirs(res_file_dir)
+    with open(res_file, 'wb') as out_f:
+        if protocol==2:
+            pickle.dump(data_list, out_f, protocol=2)
+        else:
+            pickle.dump(data_list, out_f)
+
+
+def load_pkl(pkl_file, res_list=None):
+    with open(pkl_file, 'rb') as in_f:
+        try:
+            data = pickle.load(in_f)
+        except UnicodeDecodeError:
+            in_f.seek(0)
+            data = pickle.load(in_f, encoding='latin1')
+    return data
 
 
 def draw_keypoints_each(image, keypoints, res_dir):
