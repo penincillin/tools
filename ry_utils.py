@@ -8,6 +8,21 @@ import pickle
 import json
 
 
+def save_mesh_to_obj(obj_path, verts, faces=None):
+    assert isinstance(verts, np.ndarray)
+    assert isinstance(faces, np.ndarray)
+
+    with open(obj_path, 'w') as out_f:
+        # write verts
+        for v in verts:
+            out_f.write(f"v {v[0]:.4f} {v[1]:.4f} {v[2]:.4f}\n")
+        # write faces 
+        if faces is not None:
+            faces = faces.copy() + 1
+            for f in faces:
+                out_f.write(f"f {f[0]} {f[1]} {f[2]}\n")
+
+
 def renew_dir(target_dir):
     if osp.exists(target_dir):
         shutil.rmtree(target_dir)
@@ -35,13 +50,17 @@ def update_extension(file_path, new_extension):
     return new_file_path
 
 
-def get_all_files(in_dir, extension, path_type='full'):
+def get_all_files(in_dir, extension, path_type='full', keywords=''):
     assert path_type in ['full', 'relative', 'name_only']
     assert isinstance(extension, str) or isinstance(extension, tuple)
+    assert isinstance(keywords, str)
 
     all_files = list()
     for subdir, dirs, files in os.walk(in_dir):
         for file in files:
+            if len(keywords)>0:
+                if file.find(keywords)<0: 
+                    continue
             if file.endswith(extension):
                 if path_type == 'full':
                     file_path = osp.join(subdir, file)
@@ -111,3 +130,41 @@ def load_json(in_file):
     with open(in_file, 'r') as in_f:
         all_data = json.load(in_f)
         return all_data
+
+
+def save_json(out_file, data):
+    assert out_file.endswith(".json")
+    with open(out_file, "w") as out_f:
+        json.dump(data, out_f)
+
+
+def load_npz(npz_file):
+    res_data = dict()
+    assert npz_file.endswith(".npz")
+    raw_data = np.load(npz_file, mmap_mode='r')
+    for key in raw_data.files:
+        res_data[key] = raw_data[key]
+    return res_data
+
+
+def update_npz_file(npz_file, new_key, new_data):
+    # load original data
+    assert npz_file.endswith(".npz")
+    raw_data = np.load(npz_file, mmap_mode='r')
+    all_data = dict()
+    for key in raw_data.files:
+        all_data[key] = raw_data[key]
+    # add new data && save
+    all_data[new_key] = new_data
+    np.savez(npz_file, **all_data)
+
+
+def analyze_path(input_path):
+    # assume input_path is the path of a file not a directory
+    record = input_path.split('/')
+    input_dir = '/'.join(record[:-1])
+    file_name = record[-1]
+    assert file_name.find(".")>0
+    ext = file_name.split('.')[-1]
+    file_basename = '.'.join(file_name.split('.')[:-1])
+    return input_dir, file_name, file_basename, ext
