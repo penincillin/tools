@@ -40,7 +40,8 @@ def get_subdir(in_path):
 
 def make_subdir(in_path):
     subdir_path = get_subdir(in_path)
-    build_dir(subdir_path)
+    if len(subdir_path) > 0:
+        build_dir(subdir_path)
 
 
 def update_extension(file_path, new_extension):
@@ -50,10 +51,22 @@ def update_extension(file_path, new_extension):
     return new_file_path
 
 
+def analyze_path(input_path):
+    # assume input_path is the path of a file not a directory
+    record = input_path.split('/')
+    input_dir = '/'.join(record[:-1])
+    file_name = record[-1]
+    assert file_name.find(".")>0
+    ext = file_name.split('.')[-1]
+    file_basename = '.'.join(file_name.split('.')[:-1])
+    return input_dir, file_name, file_basename, ext
+
+
 def get_all_files(in_dir, extension, path_type='full', keywords=''):
     assert path_type in ['full', 'relative', 'name_only']
     assert isinstance(extension, str) or isinstance(extension, tuple)
     assert isinstance(keywords, str)
+    assert osp.exists(in_dir)
 
     all_files = list()
     for subdir, dirs, files in os.walk(in_dir):
@@ -103,10 +116,7 @@ def md5sum(file_path):
 # save data to pkl
 def save_pkl(res_file, data_list, protocol=-1):
     assert res_file.endswith(".pkl")
-    res_file_dir = '/'.join(res_file.split('/')[:-1])
-    if len(res_file_dir)>0:
-        if not osp.exists(res_file_dir):
-            os.makedirs(res_file_dir)
+    make_subdir(res_file)
     with open(res_file, 'wb') as out_f:
         if protocol==2:
             pickle.dump(data_list, out_f, protocol=2)
@@ -157,14 +167,3 @@ def update_npz_file(npz_file, new_key, new_data):
     # add new data && save
     all_data[new_key] = new_data
     np.savez(npz_file, **all_data)
-
-
-def analyze_path(input_path):
-    # assume input_path is the path of a file not a directory
-    record = input_path.split('/')
-    input_dir = '/'.join(record[:-1])
-    file_name = record[-1]
-    assert file_name.find(".")>0
-    ext = file_name.split('.')[-1]
-    file_basename = '.'.join(file_name.split('.')[:-1])
-    return input_dir, file_name, file_basename, ext
