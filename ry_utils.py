@@ -9,8 +9,6 @@ import json
 import subprocess as sp
 
 
-
-
 def renew_dir(target_dir):
     if osp.exists(target_dir):
         shutil.rmtree(target_dir)
