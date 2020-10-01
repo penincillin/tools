@@ -5,6 +5,10 @@ import multiprocessing as mp
 import numpy as np
 import cv2
 import pickle
+import json
+import subprocess as sp
+
+
 
 
 def renew_dir(target_dir):
@@ -24,7 +28,8 @@ def get_subdir(in_path):
 
 def make_subdir(in_path):
     subdir_path = get_subdir(in_path)
-    build_dir(subdir_path)
+    if len(subdir_path) > 0:
+        build_dir(subdir_path)
 
 
 def update_extension(file_path, new_extension):
@@ -34,13 +39,29 @@ def update_extension(file_path, new_extension):
     return new_file_path
 
 
-def get_all_files(in_dir, extension, path_type='full'):
+def analyze_path(input_path):
+    # assume input_path is the path of a file not a directory
+    record = input_path.split('/')
+    input_dir = '/'.join(record[:-1])
+    file_name = record[-1]
+    assert file_name.find(".")>0
+    ext = file_name.split('.')[-1]
+    file_basename = '.'.join(file_name.split('.')[:-1])
+    return input_dir, file_name, file_basename, ext
+
+
+def get_all_files(in_dir, extension, path_type='full', keywords=''):
     assert path_type in ['full', 'relative', 'name_only']
     assert isinstance(extension, str) or isinstance(extension, tuple)
+    assert isinstance(keywords, str)
+    assert osp.exists(in_dir)
 
     all_files = list()
     for subdir, dirs, files in os.walk(in_dir):
         for file in files:
+            if len(keywords)>0:
+                if file.find(keywords)<0: 
+                    continue
             if file.endswith(extension):
                 if path_type == 'full':
                     file_path = osp.join(subdir, file)
@@ -82,10 +103,8 @@ def md5sum(file_path):
 
 # save data to pkl
 def save_pkl(res_file, data_list, protocol=-1):
-    res_file_dir = '/'.join(res_file.split('/')[:-1])
-    if len(res_file_dir)>0:
-        if not osp.exists(res_file_dir):
-            os.makedirs(res_file_dir)
+    assert res_file.endswith(".pkl")
+    make_subdir(res_file)
     with open(res_file, 'wb') as out_f:
         if protocol==2:
             pickle.dump(data_list, out_f, protocol=2)
@@ -94,6 +113,7 @@ def save_pkl(res_file, data_list, protocol=-1):
 
 
 def load_pkl(pkl_file, res_list=None):
+    assert pkl_file.endswith(".pkl")
     with open(pkl_file, 'rb') as in_f:
         try:
             data = pickle.load(in_f)
@@ -103,47 +123,93 @@ def load_pkl(pkl_file, res_list=None):
     return data
 
 
-def draw_keypoints_each(image, keypoints, res_dir):
-    if isinstance(image, str):
-        image = cv2.imread(image)
-    elif isinstance(image, np.ndarray):
-        image = image
-    else:
-        print("Undefined image type")
-        sys.exit(0)
-    renew_dir(res_dir)
-    for i in range(len(keypoints)):
-        if len(keypoints[i]) > 2:
-            x, y, score = keypoints[i]
-            if score > 0.0:
-                draw_image = image.copy()
-                cv2.circle(draw_image, (int(x), int(y)), radius=5,
-                           color=(0, 0, 255), thickness=-1)
-        else:
-            draw_image = image.copy()
-            x, y = keypoints[i]
-            cv2.circle(draw_image, (int(x), int(y)), radius=5,
-                       color=(0, 0, 255), thickness=-1)
-        cv2.imwrite('{0}/{1:02d}.png'.format(res_dir, i), draw_image)
+def load_json(in_file):
+    assert in_file.endswith(".json")
+    with open(in_file, 'r') as in_f:
+        all_data = json.load(in_f)
+        return all_data
 
 
-def draw_keypoints(image, keypoints, res_img_path):
-    if isinstance(image, str):
-        image = cv2.imread(image)
-    elif isinstance(image, np.ndarray):
-        image = image
-    else:
-        print("Undefined image type")
-        sys.exit(0)
-    draw_image = image
-    for i in range(len(keypoints)):
-        if len(keypoints[i]) > 2:
-            x, y, score = keypoints[i]
-            if score > 0.0:
-                cv2.circle(draw_image, (int(x), int(y)), radius=5,
-                           color=(0, 0, 255), thickness=-1)
-        else:
-            x, y = keypoints[i]
-            cv2.circle(draw_image, (int(x), int(y)), radius=5,
-                       color=(0, 0, 255), thickness=-1)
-    cv2.imwrite(res_image_path, draw_image)
+def save_json(out_file, data):
+    assert out_file.endswith(".json")
+    with open(out_file, "w") as out_f:
+        json.dump(data, out_f)
+
+
+def load_npz(npz_file):
+    res_data = dict()
+    assert npz_file.endswith(".npz")
+    raw_data = np.load(npz_file, mmap_mode='r')
+    for key in raw_data.files:
+        res_data[key] = raw_data[key]
+    return res_data
+
+
+def update_npz_file(npz_file, new_key, new_data):
+    # load original data
+    assert npz_file.endswith(".npz")
+    raw_data = np.load(npz_file, mmap_mode='r')
+    all_data = dict()
+    for key in raw_data.files:
+        all_data[key] = raw_data[key]
+    # add new data && save
+    all_data[new_key] = new_data
+    np.savez(npz_file, **all_data)
+
+
+def save_mesh_to_obj(obj_path, verts, faces=None):
+    assert isinstance(verts, np.ndarray)
+    assert isinstance(faces, np.ndarray)
+
+    with open(obj_path, 'w') as out_f:
+        # write verts
+        for v in verts:
+            out_f.write(f"v {v[0]:.4f} {v[1]:.4f} {v[2]:.4f}\n")
+        # write faces 
+        if faces is not None:
+            faces = faces.copy() + 1
+            for f in faces:
+                out_f.write(f"f {f[0]} {f[1]} {f[2]}\n")
+
+
+""" 
+following code is used to update ry_utils.py to conda envs
+"""
+
+def  __get_site_pacakge_dir(in_dir):
+    in_dir = osp.join(in_dir, "lib")
+    for subdir in os.listdir(in_dir):
+        if subdir.find("python3")>=0 and subdir.find("lib")<0:
+            sp_path = osp.join(in_dir, subdir, "site-packages")
+            assert osp.exists(sp_path)
+            return sp_path
+
+
+def __get_conda_info():
+    cmd = "conda env list"
+    conda_env_output = sp.check_output(cmd.split()).decode('utf-8')
+    dir_list = list()
+    for line in conda_env_output.split():
+    #for line in conda_env_output.split('/n'):
+        for item in line.split():
+            item = item.strip()
+            if item[0] == '/':
+                assert osp.exists(item)
+                sp_path = __get_site_pacakge_dir(item)
+                dir_list.append(sp_path)
+    return dir_list
+                
+
+def __update_ry_utils():
+    assert osp.exists("ry_utils.py")
+    sp_dir_list = __get_conda_info()
+
+    for sp_dir in sp_dir_list:
+        res_file = osp.join(sp_dir, "ry_utils.py")
+        shutil.copy2("ry_utils.py", res_file)
+        print(res_file)
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "update":
+            __update_ry_utils()
