@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 import pickle
 import json
+import subprocess as sp
 
 
 def save_mesh_to_obj(obj_path, verts, faces=None):
@@ -167,3 +168,45 @@ def update_npz_file(npz_file, new_key, new_data):
     # add new data && save
     all_data[new_key] = new_data
     np.savez(npz_file, **all_data)
+
+
+""" 
+following code is used to update ry_utils.py to conda envs
+"""
+
+def  __get_site_pacakge_dir(in_dir):
+    in_dir = osp.join(in_dir, "lib")
+    for subdir in os.listdir(in_dir):
+        if subdir.find("python3")>=0 and subdir.find("lib")<0:
+            sp_path = osp.join(in_dir, subdir, "site-packages")
+            assert osp.exists(sp_path)
+            return sp_path
+
+
+def __get_conda_info():
+    cmd = "conda env list"
+    conda_env_output = sp.check_output(cmd.split()).decode('utf-8')
+    dir_list = list()
+    for line in conda_env_output.split('/n'):
+        for item in line.split():
+            item = item.strip()
+            if item[0] == '/':
+                assert osp.exists(item)
+                sp_path = __get_site_pacakge_dir(item)
+                dir_list.append(sp_path)
+    return dir_list
+                
+
+def __update_ry_utils():
+    assert osp.exists("ry_utils.py")
+    sp_dir_list = __get_conda_info()
+
+    for sp_dir in sp_dir_list:
+        res_file = osp.join(sp_dir, "ry_utils.py")
+        shutil.copy2("ry_utils.py", res_file)
+        print(res_file)
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "update":
+            __update_ry_utils()
