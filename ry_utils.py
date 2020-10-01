@@ -9,19 +9,6 @@ import json
 import subprocess as sp
 
 
-def save_mesh_to_obj(obj_path, verts, faces=None):
-    assert isinstance(verts, np.ndarray)
-    assert isinstance(faces, np.ndarray)
-
-    with open(obj_path, 'w') as out_f:
-        # write verts
-        for v in verts:
-            out_f.write(f"v {v[0]:.4f} {v[1]:.4f} {v[2]:.4f}\n")
-        # write faces 
-        if faces is not None:
-            faces = faces.copy() + 1
-            for f in faces:
-                out_f.write(f"f {f[0]} {f[1]} {f[2]}\n")
 
 
 def renew_dir(target_dir):
@@ -170,6 +157,21 @@ def update_npz_file(npz_file, new_key, new_data):
     np.savez(npz_file, **all_data)
 
 
+def save_mesh_to_obj(obj_path, verts, faces=None):
+    assert isinstance(verts, np.ndarray)
+    assert isinstance(faces, np.ndarray)
+
+    with open(obj_path, 'w') as out_f:
+        # write verts
+        for v in verts:
+            out_f.write(f"v {v[0]:.4f} {v[1]:.4f} {v[2]:.4f}\n")
+        # write faces 
+        if faces is not None:
+            faces = faces.copy() + 1
+            for f in faces:
+                out_f.write(f"f {f[0]} {f[1]} {f[2]}\n")
+
+
 """ 
 following code is used to update ry_utils.py to conda envs
 """
@@ -187,7 +189,8 @@ def __get_conda_info():
     cmd = "conda env list"
     conda_env_output = sp.check_output(cmd.split()).decode('utf-8')
     dir_list = list()
-    for line in conda_env_output.split('/n'):
+    for line in conda_env_output.split():
+    #for line in conda_env_output.split('/n'):
         for item in line.split():
             item = item.strip()
             if item[0] == '/':
