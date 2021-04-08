@@ -224,7 +224,8 @@ def __get_conda_info():
             if item[0] == '/':
                 assert osp.exists(item)
                 sp_path = __get_site_pacakge_dir(item)
-                dir_list.append(sp_path)
+                if sp_path is not None:
+                    dir_list.append(sp_path)
     return dir_list
                 
 
