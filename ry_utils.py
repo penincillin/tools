@@ -24,6 +24,7 @@ def get_subdir(in_path):
     subdir_path = '/'.join(in_path.split('/')[:-1])
     return subdir_path
 
+
 def make_subdir(in_path):
     subdir_path = get_subdir(in_path)
     if len(subdir_path) > 0:
@@ -39,6 +40,7 @@ def update_extension(file_path, new_extension):
 
 def analyze_path(input_path):
     # assume input_path is the path of a file not a directory
+    assert not osp.isdir(input_path), "The input should be file instead of directory"
     record = input_path.split('/')
     input_dir = '/'.join(record[:-1])
     file_name = record[-1]
@@ -97,6 +99,34 @@ def md5sum(file_path):
     with open(file_path, 'rb') as in_f:
         hash_md5.update(in_f.read())
     return hash_md5.hexdigest()
+
+
+def __get_file_size(in_path):
+    return osp.getsize(in_path)
+
+
+def __get_dir_size(in_path):
+    size_all = 0.0
+    for subdir, dirs, files in os.walk(in_path):
+        for file in files:
+            file_path = osp.join(subdir, file)
+            size_all += __get_file_size(file_path)
+    return size_all
+
+
+def get_file_size(in_path, unit='KB'):
+    assert osp.exists(in_path)
+    if osp.isdir(in_path):
+        size = __get_dir_size(in_path)
+    else:
+        size = __get_file_size(in_path)
+
+    # unit of size is byte
+    print("origin:", size)
+    valid_units = ['B', 'KB', 'MB', 'GB']
+    assert unit in valid_units
+    size = size / (1024 ** valid_units.index(unit))
+    return size
 
 
 # save data to pkl

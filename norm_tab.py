@@ -42,7 +42,11 @@ def norm_tab(file_list):
         os.remove(tmp_file_path)
 
 
-if __name__ == '__main__':
+def main():
     norm_dir = './unit_4SpaceTab'
     file_list = get_file_list(norm_dir)
     norm_tab(file_list)
+
+
+if __name__ == '__main__':
+    main()
