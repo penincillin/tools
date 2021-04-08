@@ -237,7 +237,12 @@ def __update_ry_utils():
         shutil.copy2("ry_utils.py", res_file)
         print(res_file)
 
-if __name__ == '__main__':
+
+def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "update":
             __update_ry_utils()
+
+
+if __name__ == '__main__':
+    main()
